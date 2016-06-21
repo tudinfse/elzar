@@ -1,0 +1,74 @@
+
+(Note: we always use trans-versions to find transaction boundaries)
+
+How to get debug trace
+======================
+
+first (for Ubuntu):
+```
+  echo 0 | sudo tee /proc/sys/kernel/yama/ptrace_scope > /dev/null
+```
+
+then collect the debug trace
+```
+  ~/bin/intel_sde/sde  -rtm-mode nop -debugtrace -- histogram/histogram.trans2.exe histogram/input/tiny.bmp
+```
+
+and then strip it to only program functions
+```
+  grep 'INS 0x0000000000' sde-debugtrace-out.txt > histogram/histogram.trans2.log
+```
+
+we can strip it even further, discarding TID0 thread:
+```
+  grep -v '^TID0' histogram/histogram.trans2.log > histogram/histogram.trans2.lognew
+```
+
+
+How to run experiments
+======================
+
+To run a native version specify (1) trans version, (2) "-m nop" for doing nops on Intel RTM instructions.
+```
+python fi-gdb.py -m nop -p histogram/histogram.trans2.exe -a "histogram/input/tiny.bmp" -d histogram/histogram.trans2.log -t 1 -r histogram/goldenrun.log -l logs/native2
+```
+
+To run avxswift version specify (1) hard version, (2) "-m nop" for doing nops on Intel RTM instructions.
+```
+python fi-gdb.py -m nop -p histogram/histogram.hard2.exe -a "histogram/input/tiny.bmp" -d histogram/histogram.hard2.log -t 1 -r histogram/goldenrun.log -l logs/swift2
+```
+
+How to run remotely
+======================
+
+We use fabric for that.
+
+1. Install dependencies (only once):
+```
+fab -R fi install_deps
+```
+
+2. Each time you change something in fault injector or add new benchmarks, deploy it:
+```
+fab -R fi deploy
+```
+
+3. After deploying one can start fault injections in specified benchmark:
+```
+fab -R fi --set=prog=histogram start
+```
+
+4. One can check status like this:
+```
+fab -R fi status | grep -i 'no sockets found'
+```
+
+5. To download all the results:
+```
+fab -R fi download
+```
+
+6. After downloading all logs, one can collect summary statistics:
+```
+python fi-collect.py
+```

@@ -1,0 +1,21 @@
+TRANS_PASSFILE = $(MKFILE_PATH)/../transactifier/pass/transactify_pass.so
+TRANS_PASSNAME = -transactify
+TRANS_RUNTIME  = $(MKFILE_PATH)/../transactifier/runtime/tx.ll
+
+FIEXE = $(MKFILE_PATH)/../figdb/$(NAME)/$(NAME).$(ACTION).exe
+
+all:: $(BUILDPATH)/$(NAME).fi.bc $(FIEXE)
+
+clean::
+	rm -f $(BUILDPATH)/$(NAME).fi.bc $(FIEXE)
+
+
+# transactify for fault injections
+$(BUILDPATH)/$(NAME).fi.bc: $(BUILDPATH)/$(NAME).final.bc
+	$(LLVM_OPT) -load $(TRANS_PASSFILE) $(TRANS_PASSNAME) $(TRANS_PASS_FLAGS) $^ -o $(BUILDPATH)/$(NAME).finoinline.bc
+	$(LLVM_OPT) -always-inline $(BUILDPATH)/$(NAME).finoinline.bc -o $@
+
+# put executable-for-fi in corresponding figdb directory
+$(FIEXE): $(BUILDPATH)/$(NAME).fi.bc $(addprefix $(BUILDPATH)/, $(LLS2))
+	$(LLVM_CLANGPP) $(FINALCCFLAGS) -o $@ $^ -I $(INCLUDE_DIRS) -L $(LIB_DIRS) $(LIBS)
+

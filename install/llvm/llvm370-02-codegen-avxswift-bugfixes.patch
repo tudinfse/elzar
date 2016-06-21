@@ -1,0 +1,36 @@
+diff --git a/lib/Analysis/Loads.cpp b/lib/Analysis/Loads.cpp
+index aed3b04..1afccbd 100644
+--- a/lib/Analysis/Loads.cpp
++++ b/lib/Analysis/Loads.cpp
+@@ -173,6 +173,10 @@ Value *llvm::FindAvailableLoadedValue(Value *Ptr, BasicBlock *ScanBB,
+   if (MaxInstsToScan == 0)
+     MaxInstsToScan = ~0U;
+ 
++  // Dmitrii Kuvaiskii: added sanity check
++  if (!Ptr->getType()->isPointerTy())
++    return nullptr;
++
+   Type *AccessTy = cast<PointerType>(Ptr->getType())->getElementType();
+ 
+   const DataLayout &DL = ScanBB->getModule()->getDataLayout();
+diff --git a/lib/Transforms/InstCombine/InstCombinePHI.cpp b/lib/Transforms/InstCombine/InstCombinePHI.cpp
+index ca2caed..4c995c1 100644
+--- a/lib/Transforms/InstCombine/InstCombinePHI.cpp
++++ b/lib/Transforms/InstCombine/InstCombinePHI.cpp
+@@ -197,6 +197,16 @@ Instruction *InstCombiner::FoldPHIArgGEPIntoPHI(PHINode &PN) {
+   if (AllBasePointersAreAllocas)
+     return nullptr;
+ 
++  // D. Kuvaiskii: on PHIs that return vector of pointers to struct element
++  // GetElementPtrInst::Create() segfaults due to getIndexedType() returning
++  // a nullptr because indexValid() expects constant vector not another PHI
++  // TODO: report this bug; ignore this corner-case for now
++  if (PN.getType()->isVectorTy() && 
++      FirstInst->getSourceElementType()->isStructTy()) {
++    // trying to substitute a vector-phi with GEP inside struct 
++    return nullptr;
++  }
++
+   // Otherwise, this is safe to transform.  Insert PHI nodes for each operand
+   // that is variable.
+   SmallVector<PHINode*, 16> OperandPhis(FixedOperands.size());

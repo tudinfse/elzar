@@ -1,0 +1,6 @@
+all::
+	echo "ACTION is not specified {native native_nosse swift swiftr avxswift}"
+
+cleanall::
+	rm -rf build
+

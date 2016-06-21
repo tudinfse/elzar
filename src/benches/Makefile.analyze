@@ -1,0 +1,12 @@
+INSTANALYZE_PASSFILE = $(MKFILE_PATH)/util/instanalyzer/instanalyzer_pass.so
+INSTANALYZE_PASSNAME = -instanalyze
+
+all:: $(BUILDPATH)/$(NAME).analyze.log
+
+clean::
+	rm -f $(BUILDPATH)/$(NAME).analyze.log
+
+# InstAnalyze log
+$(BUILDPATH)/$(NAME).analyze.log: $(BUILDPATH)/$(NAME).final.bc
+	$(LLVM_OPT) -f -load $(INSTANALYZE_PASSFILE) $(INSTANALYZE_PASSNAME) $^ > /dev/null 2> $(BUILDPATH)/$(NAME).analyze.log
+
